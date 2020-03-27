@@ -1,17 +1,18 @@
-// Learn TypeScript:
-//  - [Chinese] http://docs.cocos.com/creator/manual/zh/scripting/typescript.html
-//  - [English] http://www.cocos2d-x.org/docs/creator/manual/en/scripting/typescript.html
-// Learn Attribute:
-//  - [Chinese] http://docs.cocos.com/creator/manual/zh/scripting/reference/attributes.html
-//  - [English] http://www.cocos2d-x.org/docs/creator/manual/en/scripting/reference/attributes.html
-// Learn life-cycle callbacks:
-//  - [Chinese] http://docs.cocos.com/creator/manual/zh/scripting/life-cycle-callbacks.html
-//  - [English] http://www.cocos2d-x.org/docs/creator/manual/en/scripting/life-cycle-callbacks.html
+import DrawArea from './DrawArea'
 
 const { ccclass, property } = cc._decorator;
 
 @ccclass
 export default class Player extends cc.Component {
+
+    @property(cc.Graphics)
+    private vehicle: cc.Graphics = null;
+
+    @property(cc.Sprite)
+    private wheel_rear: cc.Sprite = null;
+
+    @property(cc.Sprite)
+    private wheel_front: cc.Sprite = null;
 
     // LIFE-CYCLE CALLBACKS:
 
@@ -20,18 +21,37 @@ export default class Player extends cc.Component {
     }
 
     protected onLoad(): void {
-        let jumpAction: cc.ActionInterval = this.setJumpAction();
-        this.node.runAction(jumpAction);
+
     }
 
     protected start(): void {
-
+        this.node.active = false;
     }
 
-    private setJumpAction(): cc.ActionInterval {
-        let jumpUp = cc.moveBy(200, cc.v2(0, 200)).easing(cc.easeCircleActionOut);
-        let jumpDown = cc.moveBy(200, cc.v2(0, -200)).easing(cc.easeCircleActionIn);
-        return cc.repeatForever(cc.sequence(jumpUp, jumpDown));
+    /**画车 */
+    public drawVehicle(drawPoint: Array<cc.Vec2>): void {
+        if (drawPoint.length <= 0) {
+            return;
+        }
+        this.vehicle.clear();
+        drawPoint.forEach((point: cc.Vec2) => {
+            this.vehicle.circle(point.x, point.y, DrawArea.DRAW_CIRCLE_R);
+        });
+        this.vehicle.stroke();
+        this.vehicle.fill();
+
+        this.drawWheel(drawPoint);
+
+        this.node.active = true;
+    }
+
+    /**画轮子 */
+    private drawWheel(drawPoint: Array<cc.Vec2>): void {
+        let rearPos: cc.Vec2 = drawPoint[0];
+        let frontPos: cc.Vec2 = drawPoint[drawPoint.length - 1];
+
+        this.wheel_rear.node.setPosition(rearPos);
+        this.wheel_front.node.setPosition(frontPos);
     }
 
     // update (dt) {}
