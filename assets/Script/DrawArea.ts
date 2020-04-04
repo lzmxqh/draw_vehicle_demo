@@ -11,7 +11,7 @@ export default class DrawArea extends cc.Component {
     @property(cc.Graphics)
     private drawLine: cc.Graphics = null;
 
-    private drawPoint: Array<cc.Vec2> = [];
+    private drawPoints: Array<cc.Vec2> = [];
 
     protected onDestroy(): void {
         this.node.off(cc.Node.EventType.TOUCH_MOVE, this.onTouchMove, this);
@@ -42,14 +42,14 @@ export default class DrawArea extends cc.Component {
         this.drawLine.fill();
     }
 
-    /**计算画圆 */
+    /**计算画线（多个圆组成） */
     private calculateDrawCircle(goalPos: cc.Vec2): void {
-        if (this.drawPoint.length <= 0) {
+        if (this.drawPoints.length <= 0) {
             this.drawCircle(goalPos);
             return;
         }
 
-        let curPos: cc.Vec2 = this.drawPoint[this.drawPoint.length - 1];
+        let curPos: cc.Vec2 = this.drawPoints[this.drawPoints.length - 1];
         let distance: number = DrawArea.DRAW_CIRCLE_R / 2;      // 两点间距离
 
         let count: number = CalculateUtil.calculatePointCount(curPos, goalPos, distance);
@@ -79,20 +79,20 @@ export default class DrawArea extends cc.Component {
 
     /**画圆 */
     private drawCircle(curPos: cc.Vec2): void {
-        this.drawPoint.push(curPos);
+        this.drawPoints.push(curPos);
         this.drawLine.circle(curPos.x, curPos.y, DrawArea.DRAW_CIRCLE_R);
     }
 
     private onTouchEnd(event: cc.Event.EventTouch): void {
-        if (this.drawPoint.length <= 0) {
+        if (this.drawPoints.length <= 0) {
             return;
         }
         let customEvent: cc.Event.EventCustom = new cc.Event.EventCustom(DrawArea.DRAW_VEHICLE, true);
-        customEvent.setUserData(this.drawPoint);
+        customEvent.setUserData(this.drawPoints);
         this.node.dispatchEvent(customEvent);
 
         this.drawLine.clear();
-        this.drawPoint = [];
+        this.drawPoints = [];
     }
 
     // protected update(): void {

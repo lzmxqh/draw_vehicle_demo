@@ -1,5 +1,5 @@
 import DrawArea from "./DrawArea";
-import Player from "./Player";
+import Vehicle from "./Vehicle";
 
 const { ccclass, property } = cc._decorator;
 
@@ -13,21 +13,38 @@ export default class GameMain extends cc.Component {
     drawArea: cc.Node = null;
 
     @property(cc.Node)
-    player: cc.Node = null;
+    vehicle: cc.Node = null;
 
     protected onDestroy(): void {
         this.node.off(DrawArea.DRAW_VEHICLE, this.drawVehicle, this);
     }
 
-    protected start(): void {
-        this.node.on(DrawArea.DRAW_VEHICLE, this.drawVehicle, this);
+    protected onLoad(): void {
+        cc.director.getPhysicsManager().enabled = true; // 开启物理引擎需要写在 onLoad 中
+    }
 
+    protected start(): void {
         // cc.debug.setDisplayStats(false);
+        this.openPhysics();
+
+        this.node.on(DrawArea.DRAW_VEHICLE, this.drawVehicle, this);
+    }
+
+    private openPhysics(): void {
+        let manager: cc.PhysicsManager = cc.director.getPhysicsManager();
+
+        manager.enabledAccumulator = true;
+
+        // manager.debugDrawFlags = 1;     // 设置调试绘制标志
+
+        cc.PhysicsManager.FIXED_TIME_STEP = 1 / 30;
+        cc.PhysicsManager.VELOCITY_ITERATIONS = 8;
+        cc.PhysicsManager.POSITION_ITERATIONS = 8;
     }
 
     private drawVehicle(event: cc.Event.EventCustom): void {
         event.stopPropagation();
-        (this.player.getComponent('Player') as Player).drawVehicle(event.getUserData());
+        (this.vehicle.getComponent('Vehicle') as Vehicle).drawVehicle(event.getUserData());
     }
 
     // protected update(): void {
