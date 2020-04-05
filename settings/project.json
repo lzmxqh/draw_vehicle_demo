@@ -8,12 +8,12 @@
   },
   "collision-matrix": [
     [
-      true,
+      false,
       true
     ],
     [
       true,
-      true
+      false
     ]
   ],
   "design-resolution-height": 1334,
@@ -43,12 +43,12 @@
   "last-module-event-record-time": 0,
   "assets-sort-type": "name",
   "facebook": {
-    "enable": false,
     "appID": "",
-    "live": {
+    "audience": {
       "enable": false
     },
-    "audience": {
+    "enable": false,
+    "live": {
       "enable": false
     }
   }

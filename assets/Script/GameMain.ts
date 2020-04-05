@@ -24,7 +24,7 @@ export default class GameMain extends cc.Component {
     }
 
     protected start(): void {
-        // cc.debug.setDisplayStats(false);
+        cc.debug.setDisplayStats(false);
         this.openPhysics();
 
         this.node.on(DrawArea.DRAW_VEHICLE, this.drawVehicle, this);
@@ -35,7 +35,7 @@ export default class GameMain extends cc.Component {
 
         manager.enabledAccumulator = true;
 
-        // manager.debugDrawFlags = 1;     // 设置调试绘制标志
+        manager.debugDrawFlags = 1;     // 设置调试绘制标志
 
         cc.PhysicsManager.FIXED_TIME_STEP = 1 / 30;
         cc.PhysicsManager.VELOCITY_ITERATIONS = 8;
