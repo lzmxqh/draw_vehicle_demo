@@ -1,4 +1,8 @@
 import DrawArea from './DrawArea'
+import Wheel from './Wheel'
+import VehicleEnum from './VehicleEnum'
+import ComponentUtil from './utils/ComponentUtil'
+import VehicleType from './VehicleType'
 
 const { ccclass, property } = cc._decorator;
 
@@ -18,6 +22,8 @@ export default class Vehicle extends cc.Component {
     private wheelRear: cc.Node = null;
     private wheelFront: cc.Node = null;
 
+    private colliderTags: { [tag: number]: boolean } = {};
+
     // LIFE-CYCLE CALLBACKS:
 
     protected onDestroy(): void {
@@ -32,67 +38,47 @@ export default class Vehicle extends cc.Component {
 
     }
 
-    /**画车身 */
-    public drawVehicle(drawPoints: Array<cc.Vec2>): void {
+    /**刷新车 */
+    public updateVehicle(drawPoints: Array<cc.Vec2>): void {
         if (drawPoints.length <= 0) {
             return;
         }
-        this.node.x = 0;
-        this.node.y = 200;
+        let _self = this;
 
-        this.vehicle.clear();
-        this.vehicle.moveTo(drawPoints[0].x, drawPoints[1].y);
-        drawPoints.forEach((point: cc.Vec2) => {
-            this.vehicle.lineTo(point.x, point.y);
-            this.vehicle.stroke();
-            this.vehicle.moveTo(point.x, point.y);
-        });
+        _self.node.x = 0;
+        _self.node.y = 200;
 
-        this.resetVehicleBody();
-        this.updateVehicle(drawPoints);
-        this.drawWheel(drawPoints);
+        _self.resetVehicle();
 
-        if (!this.node.active) {
-            this.node.active = true;
+        _self.drawVehicleBody(drawPoints);
+        _self.drawWheel(drawPoints);
+
+        if (!_self.node.active) {
+            _self.node.active = true;
         }
     }
 
-    /**重置车身刚体 */
-    private resetVehicleBody(): void {
-        let vehicleNode: cc.Node = this.vehicle.node;   // 获取车节点
-
-        // 清空车身刚体小部件
-        let weldJoints: Array<cc.WeldJoint> = vehicleNode.getComponents(cc.WeldJoint);
-        for (let i = weldJoints.length - 1; i >= 0; i--) {
-            let weld: cc.WeldJoint = weldJoints[i];
-            weld.destroy();
-        }
-
-        // 清空轮子
-        let wheelJoints: Array<cc.WheelJoint> = vehicleNode.getComponents(cc.WheelJoint);
-        for (let i = wheelJoints.length - 1; i >= 0; i--) {
-            let wheel: cc.WheelJoint = wheelJoints[i];
-            wheel.destroy();
-        }
-
-        // 重置线性速度
-        vehicleNode.getComponent(cc.RigidBody).linearVelocity = cc.v2(0, 0);
+    /**重置车 */
+    private resetVehicle(): void {
+        let _self = this;
+        let vehicleNode: cc.Node = _self.vehicle.node;   // 获取车节点
 
         vehicleNode.removeAllChildren();
-        this.vehicleBodys = [];
+        _self.vehicleBodys = [];
 
-        this.wheelRear = null;
-        this.wheelFront = null;
+        _self.wheelRear = null;
+        _self.wheelFront = null;
     }
 
-    /**刷新车身刚体 */
-    private updateVehicle(drawPoints: Array<cc.Vec2>): void {
-        let vehicleNode: cc.Node = this.vehicle.node;   // 获取车节点
+    /**画车身 */
+    private drawVehicleBody(drawPoints: Array<cc.Vec2>): void {
+        let _self = this;
+        let vehicleNode: cc.Node = _self.vehicle.node;   // 获取车节点
 
-        let recordPos: cc.Vec2 = drawPoints[0];
+        let beforePos: cc.Vec2 = drawPoints[0];
         for (let i = 1; i < drawPoints.length; i++) {
             let curPos: cc.Vec2 = drawPoints[i];
-            let subVec: cc.Vec2 = curPos.sub(recordPos);
+            let subVec: cc.Vec2 = curPos.sub(beforePos);
             let distance: number = subVec.mag() + 5;
 
             // 给定方向向量
@@ -102,72 +88,83 @@ export default class Vehicle extends cc.Component {
             let rotateVec: number = subVec.signAngle(tempVec) / Math.PI * 180 - 90;
 
             // 创建车刚体小部件
-            let lineItem: cc.Node = cc.instantiate(this.linePrefab);
-            lineItem.rotation = rotateVec;
-            lineItem.position = curPos;
+            let lineItem: cc.Node = cc.instantiate(_self.linePrefab);
+            lineItem.angle = -rotateVec;
+            lineItem.setPosition(beforePos);
             lineItem.setParent(vehicleNode);
 
             // 这一步是为了防止两个线段之间出现空隙，动态改变预制体的长度
             lineItem.width = distance;
 
-            lineItem.getComponent(cc.PhysicsBoxCollider).offset.x = -lineItem.width / 2;
+            lineItem.getComponent(cc.PhysicsBoxCollider).offset.x = lineItem.width / 2;
             lineItem.getComponent(cc.PhysicsBoxCollider).size.width = lineItem.width;
+            lineItem.getComponent(cc.PhysicsBoxCollider).sensor = true;
+            lineItem.getComponent(cc.PhysicsBoxCollider).restitution = 100;
             lineItem.getComponent(cc.PhysicsBoxCollider).apply();
 
-            // 焊接车刚体小部件
-            let weldJoint: cc.WeldJoint = vehicleNode.addComponent(cc.WeldJoint);
-            weldJoint.connectedBody = lineItem.getComponent(cc.RigidBody);
-            weldJoint.anchor = curPos;
-            weldJoint.referenceAngle = rotateVec;
+            if (_self.vehicleBodys.length > 0) {
+                let beforeLine: cc.Node = _self.vehicleBodys[_self.vehicleBodys.length - 1];
 
-            this.vehicleBodys.push(lineItem);
+                // 焊接车刚体小部件
+                let weldJoint: cc.WeldJoint = lineItem.addComponent(cc.WeldJoint);
+                weldJoint.referenceAngle = -rotateVec - beforeLine.angle;
 
-            recordPos = cc.v2(curPos.x, curPos.y);
+                weldJoint.connectedBody = beforeLine.getComponent(cc.RigidBody);
+                weldJoint.connectedAnchor = cc.v2(beforeLine.width - 5, 0);
+            }
+            _self.vehicleBodys.push(lineItem);
+
+            beforePos = cc.v2(curPos.x, curPos.y);
         }
     }
 
     /**画轮子 */
     private drawWheel(drawPoints: Array<cc.Vec2>): void {
+        let _self = this;
+
+        let vehicleNode: cc.Node = _self.vehicle.node;
+        let lineRear: cc.Node = _self.vehicleBodys[0];
+        let lineFront: cc.Node = _self.vehicleBodys[_self.vehicleBodys.length - 1];
+
+        let wheelSF: cc.SpriteFrame = new cc.SpriteFrame("HelloWorld");     // 轮胎精灵帧
         let rearPos: cc.Vec2 = drawPoints[0];
         let frontPos: cc.Vec2 = drawPoints[drawPoints.length - 1];
 
-        let vehicleNode: cc.Node = this.vehicle.node;
-
-        let wheelRear: cc.Node = cc.instantiate(this.wheelPrefab);
+        let wheelRear: cc.Node = cc.instantiate(_self.wheelPrefab);
+        wheelRear.getComponent(cc.Sprite).spriteFrame = wheelSF;
+        wheelRear.setPosition(rearPos);
         vehicleNode.addChild(wheelRear);
-        wheelRear.position = rearPos;
 
-        let wheelFront: cc.Node = cc.instantiate(this.wheelPrefab);
+        let wheelFront: cc.Node = cc.instantiate(_self.wheelPrefab);
+        wheelRear.getComponent(cc.Sprite).spriteFrame = wheelSF;
+        wheelFront.setPosition(frontPos);
         vehicleNode.addChild(wheelFront);
-        wheelFront.position = frontPos;
 
-        wheelRear.getComponent(cc.RigidBody).linearVelocity = cc.v2(0, 0);
-        wheelFront.getComponent(cc.RigidBody).linearVelocity = cc.v2(0, 0);
+        wheelRear.getComponent(cc.PhysicsCircleCollider).tag = VehicleEnum.COLLIDER_TAG.REAR_TAG;       // 后轮
+        wheelFront.getComponent(cc.PhysicsCircleCollider).tag = VehicleEnum.COLLIDER_TAG.FRONT_TAG;      // 前轮
 
         wheelRear.getComponent(cc.PhysicsCircleCollider).apply();
         wheelFront.getComponent(cc.PhysicsCircleCollider).apply();
 
         // 加入轮子关节
         // 后轮
-        let wheelJointRear: cc.WheelJoint = vehicleNode.addComponent(cc.WheelJoint);
-        wheelJointRear.connectedBody = wheelRear.getComponent(cc.RigidBody);
-        wheelJointRear.anchor = rearPos;
-        // wheelJointRear.maxMotorTorque = 1000;
-        // wheelJointRear.motorSpeed = 1000;
-        wheelJointRear.enableMotor = true;
-        wheelJointRear.frequency = 5;
+        let wheelJointRear: cc.WheelJoint = ComponentUtil.addWheelJointToObj(lineRear, {
+            connectedNode: wheelRear,
+            anchor: cc.v2(0, 0)
+        });
 
         // 前轮
-        let wheelJointFront: cc.WheelJoint = vehicleNode.addComponent(cc.WheelJoint);
-        wheelJointFront.connectedBody = wheelFront.getComponent(cc.RigidBody);
-        wheelJointFront.anchor = frontPos;
-        // wheelJointFront.maxMotorTorque = 1000;
-        // wheelJointFront.motorSpeed = 1000;
-        // wheelJointFront.enableMotor = true;
-        wheelJointFront.frequency = 5;
+        let wheelJointFront: cc.WheelJoint = ComponentUtil.addWheelJointToObj(lineFront, {
+            connectedNode: wheelFront,
+            anchor: cc.v2(lineFront.width - 5, 0)
+        });
 
-        this.wheelRear = wheelRear;
-        this.wheelFront = wheelFront;
+        let distanceJoint: cc.DistanceJoint = wheelRear.addComponent(cc.DistanceJoint);
+        distanceJoint.connectedBody = wheelFront.getComponent(cc.RigidBody);
+        distanceJoint.distance = frontPos.sub(rearPos).mag();
+
+        _self.wheelRear = wheelRear;
+        _self.wheelFront = wheelFront;
     }
 
     // update (dt) {}

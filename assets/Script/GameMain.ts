@@ -16,7 +16,7 @@ export default class GameMain extends cc.Component {
     vehicle: cc.Node = null;
 
     protected onDestroy(): void {
-        this.node.off(DrawArea.DRAW_VEHICLE, this.drawVehicle, this);
+        this.node.off(DrawArea.DRAW_VEHICLE, this.onDrawVehicle, this);
     }
 
     protected onLoad(): void {
@@ -27,7 +27,7 @@ export default class GameMain extends cc.Component {
         cc.debug.setDisplayStats(false);
         this.openPhysics();
 
-        this.node.on(DrawArea.DRAW_VEHICLE, this.drawVehicle, this);
+        this.node.on(DrawArea.DRAW_VEHICLE, this.onDrawVehicle, this);
     }
 
     private openPhysics(): void {
@@ -42,9 +42,10 @@ export default class GameMain extends cc.Component {
         cc.PhysicsManager.POSITION_ITERATIONS = 8;
     }
 
-    private drawVehicle(event: cc.Event.EventCustom): void {
+    /**监听画车 */
+    private onDrawVehicle(event: cc.Event.EventCustom): void {
         event.stopPropagation();
-        (this.vehicle.getComponent('Vehicle') as Vehicle).drawVehicle(event.getUserData());
+        (this.vehicle.getComponent('Vehicle') as Vehicle).updateVehicle(event.getUserData());
     }
 
     // protected update(): void {

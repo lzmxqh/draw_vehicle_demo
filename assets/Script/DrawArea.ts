@@ -5,7 +5,7 @@ const { ccclass, property } = cc._decorator;
 @ccclass
 export default class DrawArea extends cc.Component {
 
-    public static readonly DRAW_VEHICLE: string = "drawVehicle";
+    public static readonly DRAW_VEHICLE: string = "draw_vehicle";
     public static readonly DRAW_CIRCLE_R: number = 5;
 
     @property(cc.Graphics)
@@ -82,7 +82,4 @@ export default class DrawArea extends cc.Component {
         this.drawPoints = [];
     }
 
-    public aa(): void {
-        
-    }
 }
