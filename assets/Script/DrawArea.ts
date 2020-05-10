@@ -31,6 +31,7 @@ export default class DrawArea extends cc.Component {
     }
 
     private onTouchStart(event: cc.Event.EventTouch): void {
+        // 转换到局部坐标
         let pos = this.node.convertToNodeSpaceAR(event.getLocation());
 
         this.drawLine.moveTo(pos.x, pos.y);
@@ -44,12 +45,14 @@ export default class DrawArea extends cc.Component {
         let widthLimit: number = (this.node.width + DrawArea.DRAW_CIRCLE_R) / 2;
         let heightLimit: number = (this.node.height + DrawArea.DRAW_CIRCLE_R) / 2;
 
+        // 检查当前触摸点是否超出绘画区域
         if (pos.x < -widthLimit || pos.x > widthLimit) {
             return;
         }
         if (pos.y < -heightLimit || pos.y > heightLimit) {
             return;
         }
+        // 绘画
         this.drawLine.lineTo(pos.x, pos.y);
         this.drawLine.stroke();
         this.drawLine.moveTo(pos.x, pos.y);
@@ -58,9 +61,9 @@ export default class DrawArea extends cc.Component {
         this.currentPos = cc.v2(pos.x, pos.y);
         //求两点之间的距离
         let subVec: cc.Vec2 = this.currentPos.sub(this.recordPos);
-        let distance: number = subVec.mag() + 5;
+        let distance: number = subVec.mag() + 5;        // 防止线段间出现空隙，所以+5长度
 
-        // 如果距离大于一定值，这里的25是预制体的width
+        // 为了减少触摸点数量，如果距离大于等于预制体的width，记录存储该触摸点
         if (distance >= 25) {
             // 将此时的触摸点设为记录点
             this.recordPos = cc.v2(pos.x, pos.y);
@@ -70,14 +73,17 @@ export default class DrawArea extends cc.Component {
     }
 
     private onTouchEnd(event: cc.Event.EventTouch): void {
+        // 判断触摸点数量是否小于2，不是才发送画车事件
         if (this.drawPoints.length <= 1) {
             this.drawPoints = [];
             return;
         }
+        // 发送自定义画车事件 DrawArea.DRAW_VEHICLE
         let customEvent: cc.Event.EventCustom = new cc.Event.EventCustom(DrawArea.DRAW_VEHICLE, true);
         customEvent.setUserData(this.drawPoints);
         this.node.dispatchEvent(customEvent);
 
+        // 清空绘画区域，存储的触摸点
         this.drawLine.clear();
         this.drawPoints = [];
     }

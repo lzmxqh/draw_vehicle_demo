@@ -45,14 +45,18 @@ export default class Vehicle extends cc.Component {
         }
         let _self = this;
 
+        // 重置车位置
         _self.node.x = 0;
         _self.node.y = 200;
 
+        // 重置车
         _self.resetVehicle();
-
+        // 画车身
         _self.drawVehicleBody(drawPoints);
+        // 画轮子
         _self.drawWheel(drawPoints);
 
+        // 激活车节点
         if (!_self.node.active) {
             _self.node.active = true;
         }
@@ -79,7 +83,7 @@ export default class Vehicle extends cc.Component {
         for (let i = 1; i < drawPoints.length; i++) {
             let curPos: cc.Vec2 = drawPoints[i];
             let subVec: cc.Vec2 = curPos.sub(beforePos);
-            let distance: number = subVec.mag() + 5;
+            let distance: number = subVec.mag() + 5;    // 防止线段间出现空隙，所以+5长度
 
             // 给定方向向量
             let tempVec: cc.Vec2 = cc.v2(0, 10);
@@ -96,12 +100,14 @@ export default class Vehicle extends cc.Component {
             // 这一步是为了防止两个线段之间出现空隙，动态改变预制体的长度
             lineItem.width = distance;
 
+            // 设置刚体属性
             lineItem.getComponent(cc.PhysicsBoxCollider).offset.x = lineItem.width / 2;
             lineItem.getComponent(cc.PhysicsBoxCollider).size.width = lineItem.width;
             lineItem.getComponent(cc.PhysicsBoxCollider).sensor = true;
             lineItem.getComponent(cc.PhysicsBoxCollider).restitution = 100;
             lineItem.getComponent(cc.PhysicsBoxCollider).apply();
 
+            // 首刚体不需要创建刚体焊接组件
             if (_self.vehicleBodys.length > 0) {
                 let beforeLine: cc.Node = _self.vehicleBodys[_self.vehicleBodys.length - 1];
 
@@ -123,23 +129,28 @@ export default class Vehicle extends cc.Component {
         let _self = this;
 
         let vehicleNode: cc.Node = _self.vehicle.node;
+        // 首尾车身刚体
         let lineRear: cc.Node = _self.vehicleBodys[0];
         let lineFront: cc.Node = _self.vehicleBodys[_self.vehicleBodys.length - 1];
 
         let wheelSF: cc.SpriteFrame = new cc.SpriteFrame("HelloWorld");     // 轮胎精灵帧
+        // 首尾触摸点
         let rearPos: cc.Vec2 = drawPoints[0];
         let frontPos: cc.Vec2 = drawPoints[drawPoints.length - 1];
 
+        // 通过预制节点，创建后轮
         let wheelRear: cc.Node = cc.instantiate(_self.wheelPrefab);
         wheelRear.getComponent(cc.Sprite).spriteFrame = wheelSF;
         wheelRear.setPosition(rearPos);
         vehicleNode.addChild(wheelRear);
 
+        // 通过预制节点，创建前轮
         let wheelFront: cc.Node = cc.instantiate(_self.wheelPrefab);
         wheelRear.getComponent(cc.Sprite).spriteFrame = wheelSF;
         wheelFront.setPosition(frontPos);
         vehicleNode.addChild(wheelFront);
 
+        // 添加轮子刚体标识
         wheelRear.getComponent(cc.PhysicsCircleCollider).tag = VehicleEnum.COLLIDER_TAG.REAR_TAG;       // 后轮
         wheelFront.getComponent(cc.PhysicsCircleCollider).tag = VehicleEnum.COLLIDER_TAG.FRONT_TAG;      // 前轮
 
@@ -159,6 +170,7 @@ export default class Vehicle extends cc.Component {
             anchor: cc.v2(lineFront.width - 5, 0)
         });
 
+        // 添加距离关节，约束两个轮子
         let distanceJoint: cc.DistanceJoint = wheelRear.addComponent(cc.DistanceJoint);
         distanceJoint.connectedBody = wheelFront.getComponent(cc.RigidBody);
         distanceJoint.distance = frontPos.sub(rearPos).mag();
